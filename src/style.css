@@ -1,5 +1,12 @@
 .icon {
   width: 64px;
+  height: 64px;
   vertical-align: top;
-  border: 1px solid salmon;
+  border: 30px solid rgb(0, 0, 0);
+  border-radius: 30px;
+}
+
+#sketch_canvas {
+  border: 10px solid black;
+  border-radius: 10px;
 }
