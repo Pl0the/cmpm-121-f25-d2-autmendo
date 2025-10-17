@@ -1,3 +1,5 @@
+import "./style.css";
+
 const title = document.createElement("h1");
 title.textContent = "My Canvas App";
 document.body.append(title);
