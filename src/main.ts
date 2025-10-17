@@ -88,3 +88,31 @@ clearButton.addEventListener("click", () => {
     canvas.dispatchEvent(new Event("drawing-changed"));
   }
 });
+
+const undoButton = document.createElement("button");
+undoButton.innerText = "Undo";
+document.body.append(undoButton);
+
+undoButton.addEventListener("click", () => {
+  if (lines.length > 0) {
+    const undo = lines.pop();
+    if (undo) {
+      redoLines.push(undo);
+    }
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
+
+const redoButton = document.createElement("button");
+redoButton.innerText = "Redo";
+document.body.append(redoButton);
+
+redoButton.addEventListener("click", () => {
+  if (redoLines.length > 0) {
+    const redo = redoLines.pop();
+    if (redo) {
+      lines.push(redo);
+    }
+    canvas.dispatchEvent(new Event("drawing-changed"));
+  }
+});
