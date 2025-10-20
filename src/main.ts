@@ -14,65 +14,77 @@ document.body.style.textAlign = "center";
 
 const ctx = canvas.getContext("2d");
 
-interface Point {
-  x: number;
-  y: number;
+interface Drawable {
+  display(ctx: CanvasRenderingContext2D): void;
 }
 
-type Line = Point[];
+const commands: Drawable[] = [];
+const redoCommands: Drawable[] = [];
 
-const lines: Line[] = [];
-const redoLines: Line[] = [];
+const bus = new EventTarget();
 
-let currentLine: Line | null = null;
+function notify(name: string) {
+  bus.dispatchEvent(new Event(name));
+}
 
-const cursor = { active: false, x: 0, y: 0 };
+function redraw() {
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const command of commands) {
+      command.display(ctx);
+    }
+  }
+}
+
+bus.addEventListener("drawing-changed", redraw);
+
+function tick() {
+  redraw();
+  requestAnimationFrame(tick);
+}
+tick();
+
+class MarkerLines implements Drawable {
+  points: { x: number; y: number }[] = [];
+
+  constructor(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.strokeStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(this.points[0]!.x, this.points[0]!.y);
+    for (const point of this.points) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.stroke();
+  }
+}
+
+let currentLineCommand: MarkerLines | null = null;
 
 canvas.addEventListener("mousedown", (e) => {
-  cursor.active = true;
-  cursor.x = e.offsetX;
-  cursor.y = e.offsetY;
-
-  currentLine = [];
-  lines.push(currentLine);
-  redoLines.splice(0, redoLines.length);
-  currentLine.push({ x: cursor.x, y: cursor.y });
-
-  canvas.dispatchEvent(new Event("drawing-changed"));
+  currentLineCommand = new MarkerLines(e.offsetX, e.offsetY);
+  commands.push(currentLineCommand);
+  redoCommands.splice(0, redoCommands.length);
+  notify("drawing-changed");
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (cursor.active && currentLine) {
-    cursor.x = e.offsetX;
-    cursor.y = e.offsetY;
-    currentLine.push({ x: cursor.x, y: cursor.y });
-
-    canvas.dispatchEvent(new Event("drawing-changed"));
+  if (e.buttons == 1 && currentLineCommand) {
+    currentLineCommand.drag(e.offsetX, e.offsetY);
+    notify("drawing-changed");
   }
 });
 
 canvas.addEventListener("mouseup", () => {
-  cursor.active = false;
-  currentLine = null;
-  canvas.dispatchEvent(new Event("drawing-changed"));
-});
-
-canvas.addEventListener("drawing-changed", () => {
-  if (ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const line of lines) {
-      if (line.length > 1) {
-        ctx.beginPath();
-        const point = line[0];
-        if (!point) continue;
-        ctx.moveTo(point.x, point.y);
-        for (const point of line) {
-          ctx.lineTo(point.x, point.y);
-        }
-        ctx.stroke();
-      }
-    }
-  }
+  currentLineCommand = null;
+  notify("drawing-changed");
 });
 
 const clearButton = document.createElement("button");
@@ -80,13 +92,9 @@ clearButton.innerText = "Clear";
 document.body.append(clearButton);
 
 clearButton.addEventListener("click", () => {
-  if (ctx) {
-    lines.splice(0, lines.length);
-    redoLines.splice(0, redoLines.length);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    canvas.dispatchEvent(new Event("drawing-changed"));
-  }
+  commands.splice(0, commands.length);
+  redoCommands.splice(0, redoCommands.length);
+  notify("drawing-changed");
 });
 
 const undoButton = document.createElement("button");
@@ -94,12 +102,9 @@ undoButton.innerText = "Undo";
 document.body.append(undoButton);
 
 undoButton.addEventListener("click", () => {
-  if (lines.length > 0) {
-    const undo = lines.pop();
-    if (undo) {
-      redoLines.push(undo);
-    }
-    canvas.dispatchEvent(new Event("drawing-changed"));
+  if (commands.length > 0) {
+    redoCommands.push(commands.pop()!);
+    notify("drawing-changed");
   }
 });
 
@@ -108,11 +113,8 @@ redoButton.innerText = "Redo";
 document.body.append(redoButton);
 
 redoButton.addEventListener("click", () => {
-  if (redoLines.length > 0) {
-    const redo = redoLines.pop();
-    if (redo) {
-      lines.push(redo);
-    }
-    canvas.dispatchEvent(new Event("drawing-changed"));
+  if (redoCommands.length > 0) {
+    commands.push(redoCommands.pop()!);
+    notify("drawing-changed");
   }
 });
