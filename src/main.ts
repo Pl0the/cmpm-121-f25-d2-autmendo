@@ -21,6 +21,8 @@ interface Drawable {
 const commands: Drawable[] = [];
 const redoCommands: Drawable[] = [];
 
+let toolMoved: Drawable | null = null;
+
 const bus = new EventTarget();
 
 function notify(name: string) {
@@ -33,10 +35,14 @@ function redraw() {
     for (const command of commands) {
       command.display(ctx);
     }
+    if (toolMoved) {
+      toolMoved.display(ctx);
+    }
   }
 }
 
 bus.addEventListener("drawing-changed", redraw);
+bus.addEventListener("tool-moved", redraw);
 
 function tick() {
   redraw();
@@ -69,6 +75,26 @@ class MarkerLines implements Drawable {
   }
 }
 
+class ToolMoved implements Drawable {
+  x: number;
+  y: number;
+  thickness: number;
+
+  constructor(x: number, y: number, thickness: number) {
+    this.x = x;
+    this.y = y;
+    this.thickness = thickness;
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(0, 0, 255, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.arc(this.x, this.y, this.thickness * 1.5, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+}
+
 let currentLineCommand: MarkerLines | null = null;
 let currentThickness = 2;
 
@@ -76,14 +102,28 @@ canvas.addEventListener("mousedown", (e) => {
   currentLineCommand = new MarkerLines(e.offsetX, e.offsetY, currentThickness);
   commands.push(currentLineCommand);
   redoCommands.splice(0, redoCommands.length);
+  toolMoved = null;
   notify("drawing-changed");
+});
+
+canvas.addEventListener("mouseenter", (e) => {
+  toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+  notify("tool-moved");
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (e.buttons == 1 && currentLineCommand) {
     currentLineCommand.drag(e.offsetX, e.offsetY);
     notify("drawing-changed");
+  } else if (!currentLineCommand) {
+    toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+    notify("tool-moved");
   }
+});
+
+canvas.addEventListener("mouseout", () => {
+  toolMoved = null;
+  notify("tool-moved");
 });
 
 canvas.addEventListener("mouseup", () => {
