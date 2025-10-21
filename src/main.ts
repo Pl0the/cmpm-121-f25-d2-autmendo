@@ -46,9 +46,11 @@ tick();
 
 class MarkerLines implements Drawable {
   points: { x: number; y: number }[] = [];
+  thickness: number;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, thickness: number) {
     this.points.push({ x, y });
+    this.thickness = thickness;
   }
 
   drag(x: number, y: number) {
@@ -57,6 +59,7 @@ class MarkerLines implements Drawable {
 
   display(ctx: CanvasRenderingContext2D): void {
     ctx.strokeStyle = "blue";
+    ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.moveTo(this.points[0]!.x, this.points[0]!.y);
     for (const point of this.points) {
@@ -67,9 +70,10 @@ class MarkerLines implements Drawable {
 }
 
 let currentLineCommand: MarkerLines | null = null;
+let currentThickness = 2;
 
 canvas.addEventListener("mousedown", (e) => {
-  currentLineCommand = new MarkerLines(e.offsetX, e.offsetY);
+  currentLineCommand = new MarkerLines(e.offsetX, e.offsetY, currentThickness);
   commands.push(currentLineCommand);
   redoCommands.splice(0, redoCommands.length);
   notify("drawing-changed");
@@ -87,9 +91,36 @@ canvas.addEventListener("mouseup", () => {
   notify("drawing-changed");
 });
 
+const buttonContainer = document.createElement("div");
+buttonContainer.id = "button-container";
+document.body.append(buttonContainer);
+
+const thinButton = document.createElement("button");
+thinButton.innerText = "Thin";
+thinButton.classList.add("thin-thick-button", "selected");
+buttonContainer.append(thinButton);
+
+thinButton.addEventListener("click", () => {
+  currentThickness = 2;
+  thinButton.classList.add("selected");
+  thickButton.classList.remove("selected");
+});
+
+const thickButton = document.createElement("button");
+thickButton.innerText = "Thick";
+thickButton.classList.add("thin-thick-button");
+buttonContainer.append(thickButton);
+
+thickButton.addEventListener("click", () => {
+  currentThickness = 5;
+
+  thickButton.classList.add("selected");
+  thinButton.classList.remove("selected");
+});
+
 const clearButton = document.createElement("button");
 clearButton.innerText = "Clear";
-document.body.append(clearButton);
+buttonContainer.append(clearButton);
 
 clearButton.addEventListener("click", () => {
   commands.splice(0, commands.length);
@@ -99,7 +130,7 @@ clearButton.addEventListener("click", () => {
 
 const undoButton = document.createElement("button");
 undoButton.innerText = "Undo";
-document.body.append(undoButton);
+buttonContainer.append(undoButton);
 
 undoButton.addEventListener("click", () => {
   if (commands.length > 0) {
@@ -110,7 +141,7 @@ undoButton.addEventListener("click", () => {
 
 const redoButton = document.createElement("button");
 redoButton.innerText = "Redo";
-document.body.append(redoButton);
+buttonContainer.append(redoButton);
 
 redoButton.addEventListener("click", () => {
   if (redoCommands.length > 0) {

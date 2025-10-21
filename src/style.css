@@ -10,3 +10,18 @@
   border: 5px solid black;
   border-radius: 10px;
 }
+
+#button-container {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.thin-thick-button {
+  border: 2px solid black;
+}
+
+.thin-thick-button.selected {
+  background-color: rgb(133, 225, 255);
+}
