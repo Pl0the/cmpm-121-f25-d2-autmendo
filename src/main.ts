@@ -22,6 +22,8 @@ const commands: Drawable[] = [];
 const redoCommands: Drawable[] = [];
 
 let toolMoved: Drawable | null = null;
+let currentSticker: string | null = null;
+let draggedSticker: Sticker | null = null;
 
 const bus = new EventTarget();
 
@@ -49,6 +51,8 @@ function tick() {
   requestAnimationFrame(tick);
 }
 tick();
+
+// Classes for different drawable commands
 
 class MarkerLines implements Drawable {
   points: { x: number; y: number }[] = [];
@@ -95,28 +99,123 @@ class ToolMoved implements Drawable {
   }
 }
 
+class StickerPreview implements Drawable {
+  x: number;
+  y: number;
+  emoji: string;
+  size: number;
+
+  constructor(x: number, y: number, emoji: string, size: number) {
+    this.x = x;
+    this.y = y;
+    this.emoji = emoji;
+    this.size = size;
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.font = `${this.size * 1.2}px serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
+class Sticker implements Drawable {
+  x: number;
+  y: number;
+  emoji: string;
+  angle: number = 0;
+  size: number;
+
+  constructor(x: number, y: number, emoji: string, size: number) {
+    this.x = x;
+    this.y = y;
+    this.emoji = emoji;
+    this.size = size;
+  }
+
+  drag(newX: number, newY: number) {
+    this.x = newX;
+    this.y = newY;
+
+    this.angle += 0.1;
+  }
+
+  display(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.font = `${this.size * 1.2}px serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.emoji, 0, 0);
+    ctx.restore();
+  }
+}
+
+// Event listeners for canvas drawing
+
+const emojis = ["😝", "💀", "😭"];
+
 let currentLineCommand: MarkerLines | null = null;
 let currentThickness = 2;
+let currentStickerSize = 25;
 
 canvas.addEventListener("mousedown", (e) => {
-  currentLineCommand = new MarkerLines(e.offsetX, e.offsetY, currentThickness);
-  commands.push(currentLineCommand);
-  redoCommands.splice(0, redoCommands.length);
-  toolMoved = null;
-  notify("drawing-changed");
+  if (currentSticker) {
+    const sticker = new Sticker(
+      e.offsetX,
+      e.offsetY,
+      currentSticker,
+      currentStickerSize,
+    );
+    commands.push(sticker);
+    draggedSticker = sticker;
+    redoCommands.splice(0, redoCommands.length);
+    notify("drawing-changed");
+  } else if (draggedSticker) {
+    currentLineCommand = new MarkerLines(
+      e.offsetX,
+      e.offsetY,
+      currentThickness,
+    );
+    commands.push(currentLineCommand);
+    redoCommands.splice(0, redoCommands.length);
+    toolMoved = null;
+    notify("drawing-changed");
+  }
 });
 
 canvas.addEventListener("mouseenter", (e) => {
-  toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+  if (currentSticker) {
+    toolMoved = new StickerPreview(
+      e.offsetX,
+      e.offsetY,
+      currentSticker,
+      currentStickerSize,
+    );
+  } else {
+    toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+  }
   notify("tool-moved");
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (e.buttons == 1 && currentLineCommand) {
+  if (draggedSticker) {
+    draggedSticker.drag(e.offsetX, e.offsetY);
+    notify("drawing-changed");
+  } else if (e.buttons == 1 && currentLineCommand && !currentSticker) {
     currentLineCommand.drag(e.offsetX, e.offsetY);
     notify("drawing-changed");
   } else if (!currentLineCommand) {
-    toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+    if (currentSticker) {
+      toolMoved = new StickerPreview(
+        e.offsetX,
+        e.offsetY,
+        currentSticker,
+        currentStickerSize,
+      );
+    } else {
+      toolMoved = new ToolMoved(e.offsetX, e.offsetY, currentThickness);
+    }
     notify("tool-moved");
   }
 });
@@ -127,13 +226,28 @@ canvas.addEventListener("mouseout", () => {
 });
 
 canvas.addEventListener("mouseup", () => {
+  draggedSticker = null;
   currentLineCommand = null;
   notify("drawing-changed");
 });
 
+// Ui buttons
+
 const buttonContainer = document.createElement("div");
 buttonContainer.id = "button-container";
 document.body.append(buttonContainer);
+
+emojis.forEach((emoji) => {
+  const button = document.createElement("button");
+  button.innerText = emoji;
+  buttonContainer.append(button);
+
+  button.addEventListener("click", () => {
+    currentSticker = emoji;
+    toolMoved = null;
+    notify("tool-moved");
+  });
+});
 
 const thinButton = document.createElement("button");
 thinButton.innerText = "Thin";
@@ -142,6 +256,7 @@ buttonContainer.append(thinButton);
 
 thinButton.addEventListener("click", () => {
   currentThickness = 2;
+  currentStickerSize = 25;
   thinButton.classList.add("selected");
   thickButton.classList.remove("selected");
 });
@@ -153,7 +268,7 @@ buttonContainer.append(thickButton);
 
 thickButton.addEventListener("click", () => {
   currentThickness = 5;
-
+  currentStickerSize = 40;
   thickButton.classList.add("selected");
   thinButton.classList.remove("selected");
 });
