@@ -153,8 +153,6 @@ class Sticker implements Drawable {
 
 // Event listeners for canvas drawing
 
-const emojis = ["😝", "💀", "😭"];
-
 let currentLineCommand: MarkerLines | null = null;
 let currentThickness = 2;
 let currentStickerSize = 25;
@@ -231,24 +229,49 @@ canvas.addEventListener("mouseup", () => {
   notify("drawing-changed");
 });
 
-// Ui buttons
+// UI buttons
 
 const buttonContainer = document.createElement("div");
 buttonContainer.id = "button-container";
 document.body.append(buttonContainer);
 
-emojis.forEach((emoji) => {
-  const button = document.createElement("button");
-  button.innerText = emoji;
-  buttonContainer.append(button);
+// Custom Sticker botton logic
 
-  button.addEventListener("click", () => {
-    currentSticker = emoji;
-    toolMoved = null;
-    drawButton.classList.remove("selected");
-    notify("tool-moved");
-  });
+const emojis = ["😝", "💀", "😭"];
+const stickerContainer = document.createElement("div");
+buttonContainer.append(stickerContainer);
+
+function customStickers() {
+  stickerContainer.innerText = "";
+  for (const emoji of emojis) {
+    const button = document.createElement("button");
+    button.innerText = emoji;
+    stickerContainer.append(button);
+
+    button.addEventListener("click", () => {
+      currentSticker = emoji;
+      toolMoved = null;
+      drawButton.classList.remove("selected");
+      notify("tool-moved");
+    });
+  }
+}
+
+const customStickerButton = document.createElement("button");
+customStickerButton.innerText = "Add Custom Sticker";
+buttonContainer.append(customStickerButton);
+
+customStickerButton.addEventListener("click", () => {
+  const custEmoji = prompt("Enter Custom Sticker");
+  if (custEmoji) {
+    emojis.push(custEmoji);
+    customStickers();
+  }
 });
+
+customStickers();
+
+// Other Buttons
 
 const drawButton = document.createElement("button");
 drawButton.innerText = "Draw";
