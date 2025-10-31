@@ -171,7 +171,7 @@ canvas.addEventListener("mousedown", (e) => {
     draggedSticker = sticker;
     redoCommands.splice(0, redoCommands.length);
     notify("drawing-changed");
-  } else if (draggedSticker) {
+  } else {
     currentLineCommand = new MarkerLines(
       e.offsetX,
       e.offsetY,
@@ -245,8 +245,20 @@ emojis.forEach((emoji) => {
   button.addEventListener("click", () => {
     currentSticker = emoji;
     toolMoved = null;
+    drawButton.classList.remove("selected");
     notify("tool-moved");
   });
+});
+
+const drawButton = document.createElement("button");
+drawButton.innerText = "Draw";
+drawButton.classList.add("draw-button", "selected");
+buttonContainer.append(drawButton)
+
+drawButton.addEventListener("click", () => {
+  currentSticker = null;
+  drawButton.classList.add("selected");
+
 });
 
 const thinButton = document.createElement("button");

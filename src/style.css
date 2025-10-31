@@ -25,3 +25,7 @@
 .thin-thick-button.selected {
   background-color: rgb(133, 225, 255);
 }
+
+.draw-button.selected {
+  background-color: rgb(133, 225, 255);
+}
