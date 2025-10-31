@@ -253,12 +253,11 @@ emojis.forEach((emoji) => {
 const drawButton = document.createElement("button");
 drawButton.innerText = "Draw";
 drawButton.classList.add("draw-button", "selected");
-buttonContainer.append(drawButton)
+buttonContainer.append(drawButton);
 
 drawButton.addEventListener("click", () => {
   currentSticker = null;
   drawButton.classList.add("selected");
-
 });
 
 const thinButton = document.createElement("button");
