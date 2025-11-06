@@ -26,6 +26,7 @@ const redoCommands: Drawable[] = [];
 let toolMoved: Drawable | null = null;
 let currentSticker: string | null = null;
 let draggedSticker: Sticker | null = null;
+let currentColor: string = "blue";
 
 const bus = new EventTarget();
 
@@ -59,10 +60,12 @@ tick();
 class MarkerLines implements Drawable {
   points: { x: number; y: number }[] = [];
   thickness: number;
+  color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.points.push({ x, y });
     this.thickness = thickness;
+    this.color = color;
   }
 
   drag(x: number, y: number) {
@@ -70,7 +73,7 @@ class MarkerLines implements Drawable {
   }
 
   display(ctx: CanvasRenderingContext2D): void {
-    ctx.strokeStyle = "blue";
+    ctx.strokeStyle = this.color;
     ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.moveTo(this.points[0]!.x, this.points[0]!.y);
@@ -94,7 +97,7 @@ class ToolMoved implements Drawable {
 
   display(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.5)";
+    ctx.strokeStyle = currentColor;
     ctx.lineWidth = 1;
     ctx.arc(this.x, this.y, this.thickness * 1.5, 0, 2 * Math.PI);
     ctx.stroke();
@@ -159,6 +162,11 @@ let currentLineCommand: MarkerLines | null = null;
 let currentThickness = 2;
 let currentStickerSize = 25;
 
+function randomColor() {
+  const color = Math.floor(Math.random() * 360);
+  return `hsl(${color}, 100%, 50%)`;
+}
+
 canvas.addEventListener("mousedown", (e) => {
   if (currentSticker) {
     const sticker = new Sticker(
@@ -176,6 +184,7 @@ canvas.addEventListener("mousedown", (e) => {
       e.offsetX,
       e.offsetY,
       currentThickness,
+      currentColor,
     );
     commands.push(currentLineCommand);
     redoCommands.splice(0, redoCommands.length);
@@ -282,6 +291,7 @@ buttonContainer.append(drawButton);
 
 drawButton.addEventListener("click", () => {
   currentSticker = null;
+  currentColor = randomColor();
   drawButton.classList.add("selected");
 });
 
