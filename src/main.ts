@@ -229,13 +229,13 @@ canvas.addEventListener("mouseup", () => {
   notify("drawing-changed");
 });
 
-// UI buttons
+// UI buttons Section
 
 const buttonContainer = document.createElement("div");
 buttonContainer.id = "button-container";
 document.body.append(buttonContainer);
 
-// Custom Sticker botton logic
+// Custom Sticker button logic
 
 const emojis = ["😝", "💀", "😭"];
 const stickerContainer = document.createElement("div");
@@ -337,4 +337,32 @@ redoButton.addEventListener("click", () => {
     commands.push(redoCommands.pop()!);
     notify("drawing-changed");
   }
+});
+
+const exportButton = document.createElement("button");
+exportButton.innerText = "Export";
+buttonContainer.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d");
+  if (!exportCtx) {
+    return;
+  }
+
+  const scaleX = exportCanvas.width / canvas.width;
+  const scaleY = exportCanvas.height / canvas.height;
+
+  exportCtx.scale(scaleX, scaleY);
+
+  for (const command of commands) {
+    command.display(exportCtx);
+  }
+
+  const link = document.createElement("a");
+  link.href = exportCanvas.toDataURL("image/png");
+  link.download = "canvas_export.png";
+  link.click();
 });
